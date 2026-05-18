@@ -1,5 +1,6 @@
 import hashlib
 from decimal import Decimal
+from urllib.parse import urlparse
 
 from django.dispatch import receiver
 from django.urls import reverse
@@ -13,6 +14,7 @@ from pretix.presale.signals import (
     global_html_footer,
     global_html_head,
     order_info_top,
+    process_response,
 )
 
 from .tasks import send_analytics_event
@@ -163,3 +165,29 @@ def nav_organizer_link(sender, request=None, **kwargs):
             'organizer': request.organizer.slug,
         }),
     }]
+
+# --- Adjust CSP headers -----------------------------------------------------
+
+@receiver(process_response, dispatch_uid="pretix_umami_process_response")
+def extend_csp(sender, request, response, **kwargs):
+
+    if not request or not hasattr(request, "organizer"):
+        return response
+    s = _settings(request.organizer)
+
+    script_url = s.get("shop_analytics_script_url")
+    if not script_url:
+        return response
+
+    parsed = urlparse(script_url)
+    origin = f"{parsed.scheme}://{parsed.netloc}"
+
+    csp = response.get("Content-Security-Policy", "")
+    for directive in ("script-src", "connect-src"):
+        if directive in csp:
+            csp = csp.replace(directive, f"{directive} {origin}", 1)
+        else:
+            csp = f"{csp}; {directive} {origin}" if csp else f"{directive} {origin}"
+    response["Content-Security-Policy"] = csp
+
+    return response
