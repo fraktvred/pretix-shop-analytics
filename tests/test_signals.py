@@ -43,6 +43,14 @@ def test_inject_head_enabled_emits_three_scripts(configured_organizer):
     assert 'data-website-id="site-123"' in result
     assert '/shop-analytics/dispatcher.js' in result
     assert '/shop-analytics/bootstrap.js' in result
+    assert 'data-performance' not in result
+
+
+def test_inject_head_performance_enabled_sets_attribute(configured_organizer):
+    from pretix_shop_analytics.signals import inject_head
+    configured_organizer.settings.set('shop_analytics_performance_enabled', True)
+    result = inject_head(sender=None, request=make_request(configured_organizer))
+    assert 'data-performance="true"' in result
 
 
 # --- inject_footer -----------------------------------------------------------

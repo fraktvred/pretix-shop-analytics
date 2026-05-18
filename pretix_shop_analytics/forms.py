@@ -25,6 +25,14 @@ class ShopAnalyticsForm(SettingsForm):
         required=False,
         help_text=_('Website ID passed to the script as data-website-id (Umami) or equivalent.'),
     )
+    shop_analytics_performance_enabled = forms.BooleanField(
+        label=_('Track web vitals (Umami)'),
+        required=False,
+        help_text=_(
+            'Adds data-performance="true" to the analytics script tag so Umami collects Core Web Vitals '
+            '(LCP, INP, CLS, FCP, TTFB). Requires Umami v3.1.0+.'
+        ),
+    )
     shop_analytics_server_endpoint = forms.URLField(
         label=_('Server-side event endpoint'),
         required=False,

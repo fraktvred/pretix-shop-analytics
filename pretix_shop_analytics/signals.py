@@ -56,8 +56,9 @@ def inject_head(sender, request=None, **kwargs):
     body = s.get('shop_analytics_dispatcher_body') or ''
     # Hash the bootstrap.js bytes so a plugin upgrade busts the browser cache.
     bootstrap_hash = _bootstrap_hash()
+    performance_attr = ' data-performance="true"' if s.get('shop_analytics_performance_enabled') else ''
     return mark_safe(
-        f'<script async defer src="{escape(script_url)}" data-website-id="{escape(site_id)}"></script>'
+        f'<script async defer src="{escape(script_url)}" data-website-id="{escape(site_id)}"{performance_attr}></script>'
         f'<script src="{dispatcher_url}?v={_hash(body)}"></script>'
         f'<script defer src="{bootstrap_url}?v={bootstrap_hash}"></script>'
     )
