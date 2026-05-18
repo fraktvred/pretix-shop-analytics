@@ -57,10 +57,15 @@ def inject_head(sender, request=None, **kwargs):
     # Hash the bootstrap.js bytes so a plugin upgrade busts the browser cache.
     bootstrap_hash = _bootstrap_hash()
     performance_attr = ' data-performance="true"' if s.get('shop_analytics_performance_enabled') else ''
+    # bootstrap.js is loaded *before* the umami script so that
+    # `window.pretixShopAnalyticsBeforeSend` (referenced via data-before-send)
+    # is defined before umami's autotracked first pageview fires. Both use
+    # `defer` (no `async`) so the browser preserves document order.
     return mark_safe(
-        f'<script async defer src="{escape(script_url)}" data-website-id="{escape(site_id)}"{performance_attr}></script>'
-        f'<script src="{dispatcher_url}?v={_hash(body)}"></script>'
         f'<script defer src="{bootstrap_url}?v={bootstrap_hash}"></script>'
+        f'<script src="{dispatcher_url}?v={_hash(body)}"></script>'
+        f'<script defer src="{escape(script_url)}" data-website-id="{escape(site_id)}"'
+        f' data-before-send="pretixShopAnalyticsBeforeSend"{performance_attr}></script>'
     )
 
 

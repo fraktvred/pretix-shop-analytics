@@ -13,6 +13,58 @@
 (function () {
     'use strict';
 
+    // Strip identifying tokens (order codes, ticket secrets, uid, …) from any
+    // URL/path before it reaches Umami. Wired up via the umami script's
+    // `data-before-send` attribute and exposed as a global so umami can find
+    // it by name. Defined at script-load time (not in init()) so it is in
+    // place before umami fires its autotrack pageview.
+    var SENSITIVE_QUERY_KEYS = ['uid', 'cart_id', 'voucher', 'token', 'code', 'secret', 'hash'];
+
+    function sanitizePath(path) {
+        if (!path || typeof path !== 'string') return path;
+        // /order/<code>/<secret>/...
+        path = path.replace(/\/order\/[^/]+\/[^/]+/g, '/order/:code/:secret');
+        // /ticket/<code>/<position>/<secret>/...
+        path = path.replace(/\/ticket\/[^/]+\/[^/]+\/[^/]+/g, '/ticket/:code/:position/:secret');
+        return path;
+    }
+
+    function sanitizeUrl(value) {
+        if (!value || typeof value !== 'string') return value;
+        var hashIdx = value.indexOf('#');
+        var hash = hashIdx >= 0 ? value.slice(hashIdx) : '';
+        var rest = hashIdx >= 0 ? value.slice(0, hashIdx) : value;
+        var qIdx = rest.indexOf('?');
+        var path = qIdx >= 0 ? rest.slice(0, qIdx) : rest;
+        var search = qIdx >= 0 ? rest.slice(qIdx + 1) : '';
+        path = sanitizePath(path);
+        if (search) {
+            try {
+                var params = new URLSearchParams(search);
+                for (var i = 0; i < SENSITIVE_QUERY_KEYS.length; i++) {
+                    if (params.has(SENSITIVE_QUERY_KEYS[i])) {
+                        params.delete(SENSITIVE_QUERY_KEYS[i]);
+                    }
+                }
+                search = params.toString();
+            } catch (e) {}
+        }
+        return path + (search ? '?' + search : '') + hash;
+    }
+
+    window.pretixShopAnalyticsBeforeSend = function (type, payload) {
+        try {
+            if (payload && typeof payload === 'object') {
+                if (payload.url) payload.url = sanitizeUrl(payload.url);
+                if (payload.referrer) payload.referrer = sanitizeUrl(payload.referrer);
+                if (payload.data && typeof payload.data === 'object') {
+                    if (payload.data.path) payload.data.path = sanitizeUrl(payload.data.path);
+                }
+            }
+        } catch (e) {}
+        return payload;
+    };
+
     // Form-action selectors against pretix's stock cart/checkout endpoints.
     // These are the URLs the markup actually POSTs to (verified against pretix
     // 2024.x). If pretix renames them, update here.
