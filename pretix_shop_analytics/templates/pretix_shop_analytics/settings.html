@@ -1,0 +1,24 @@
+{% extends "pretixcontrol/base.html" %}
+{% load i18n %}
+{% load bootstrap3 %}
+{% block title %}{% trans "Shop Analytics" %}{% endblock %}
+{% block content %}
+<h1>{% trans "Shop Analytics" %}</h1>
+<p class="text-muted">
+    {% blocktrans trimmed %}
+        Forward shop, cart and checkout events to an analytics endpoint (Umami by default).
+        Server-side events (order paid, order canceled) are sent anonymously — no order
+        code, email or visitor UUID is included.
+    {% endblocktrans %}
+</p>
+<form action="" method="post" class="form-horizontal">
+    {% csrf_token %}
+    {% bootstrap_form_errors form %}
+    {% bootstrap_form form layout="control" %}
+    <div class="form-group submit-group">
+        <button type="submit" class="btn btn-primary btn-save">
+            {% trans "Save" %}
+        </button>
+    </div>
+</form>
+{% endblock %}

@@ -1,0 +1,2 @@
+recursive-include pretix_shop_analytics/templates *
+recursive-include pretix_shop_analytics/static *
