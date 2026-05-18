@@ -1,4 +1,5 @@
 import hashlib
+import json
 from decimal import Decimal
 from urllib.parse import urlparse
 
@@ -88,30 +89,29 @@ def inject_footer(sender, request=None, **kwargs):
 
 @receiver(order_info_top, dispatch_uid='pretix_shop_analytics_order_info_top')
 def inject_order_placed(sender, order, request=None, **kwargs):
-    """Fire `order_placed` exactly once per order, browser-side.
+    """Emit per-order data for bootstrap.js to pick up and fire `order_placed`.
 
-    Uses sessionStorage to dedupe so the event only fires on the *first* visit
-    to the order page in a given browser session — typically the post-checkout
-    redirect. No order code or PII is sent to analytics; only total and currency.
+    Emitted as `<script type="application/json">` — inert data, not executable
+    JS — so it passes a strict CSP without `unsafe-inline`. bootstrap.js reads
+    the element on init, dedupes via sessionStorage (so the event only fires on
+    the *first* visit in a given browser session), and calls
+    `shopAnalytics.track('order_placed', ...)`. The order code is used purely
+    as a sessionStorage dedup key and never leaves the browser.
     """
     if not request or not _settings(order.event.organizer):
         return ''
     total = order.total
     if isinstance(total, Decimal):
         total = float(total)
-    # The order code is used purely as a sessionStorage dedup key and never
-    # leaves the browser.
-    key = f'pretix_shop_analytics_op_{escape(order.code)}'
+    payload = {
+        'key': f'pretix_shop_analytics_op_{order.code}',
+        'total': total,
+        'currency': order.event.currency,
+    }
     return mark_safe(
-        '<script>(function(){'
-        'try{'
-        f'if(sessionStorage.getItem("{key}"))return;'
-        f'sessionStorage.setItem("{key}","1");'
-        'if(window.shopAnalytics&&window.shopAnalytics.track){'
-        f'window.shopAnalytics.track("order_placed",{{total:{total},currency:"{escape(order.event.currency)}"}});'
-        '}'
-        '}catch(e){}'
-        '})();</script>'
+        '<script type="application/json" id="pretix-shop-analytics-order">'
+        f'{escape(json.dumps(payload))}'
+        '</script>'
     )
 
 

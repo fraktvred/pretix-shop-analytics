@@ -85,11 +85,25 @@
         }, true);
     }
 
+    function fireOrderPlaced() {
+        var el = document.getElementById('pretix-shop-analytics-order');
+        if (!el) return;
+        var data;
+        try { data = JSON.parse(el.textContent || ''); } catch (e) { return; }
+        if (!data || !data.key) return;
+        try {
+            if (sessionStorage.getItem(data.key)) return;
+            sessionStorage.setItem(data.key, '1');
+        } catch (e) {}
+        track('order_placed', { total: data.total, currency: data.currency });
+    }
+
     function init() {
         var uid = resolveUid();
         identify(uid);
         pageview();
         wireCart();
+        fireOrderPlaced();
     }
 
     if (document.readyState === 'loading') {

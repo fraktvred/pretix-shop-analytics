@@ -60,13 +60,23 @@ def test_inject_order_placed_disabled(organizer, order):
     assert result == ''
 
 
-def test_inject_order_placed_enabled_emits_dedup_script(configured_organizer, order):
+def test_inject_order_placed_enabled_emits_json_payload(configured_organizer, order):
+    import json
+    import re
     from pretix_shop_analytics.signals import inject_order_placed
     result = inject_order_placed(sender=order.event, order=order, request=make_request(configured_organizer))
-    assert 'order_placed' in result
-    assert 'pretix_shop_analytics_op_ABC12' in result
-    assert 'currency:"EUR"' in result
-    assert 'total:42' in result
+    # Inert JSON, not executable JS — CSP-safe without `unsafe-inline`.
+    assert 'type="application/json"' in result
+    assert 'id="pretix-shop-analytics-order"' in result
+    m = re.search(r'>(.*?)</script>', result, re.S)
+    assert m, result
+    # HTML-escaped JSON: unescape the quotes before parsing.
+    payload = json.loads(m.group(1).replace('&quot;', '"').replace('&#x27;', "'"))
+    assert payload == {
+        'key': 'pretix_shop_analytics_op_ABC12',
+        'total': 42.0,
+        'currency': 'EUR',
+    }
 
 
 def test_inject_order_placed_no_request(configured_organizer, order):
