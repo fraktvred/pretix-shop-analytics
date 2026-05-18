@@ -174,6 +174,8 @@ def extend_csp(sender, request, response, **kwargs):
     if not request or not hasattr(request, "organizer"):
         return response
     s = _settings(request.organizer)
+    if not s:
+        return response
 
     script_url = s.get("shop_analytics_script_url")
     if not script_url:
