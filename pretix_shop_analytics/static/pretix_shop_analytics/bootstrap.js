@@ -50,10 +50,43 @@
         }
     }
 
+    var UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
+
+    function getDeviceClass() {
+        var w = window.innerWidth;
+        if (w < 640) return 'mobile';
+        if (w < 1024) return 'tablet';
+        return 'desktop';
+    }
+
+    function buildSessionData() {
+        var data = {
+            device: getDeviceClass(),
+            viewport: window.innerWidth + 'x' + window.innerHeight,
+        };
+        if (navigator.language) data.language = navigator.language;
+        if (document.referrer) {
+            try {
+                var ref = new URL(document.referrer);
+                if (ref.host !== window.location.host) data.referrer_host = ref.host;
+            } catch (e) {}
+        }
+        try {
+            var params = new URLSearchParams(window.location.search);
+            for (var i = 0; i < UTM_KEYS.length; i++) {
+                var key = UTM_KEYS[i];
+                var value = params.get(key);
+                if (value) data[key] = value.slice(0, 500);
+            }
+        } catch (e) {}
+        return data;
+    }
+
     function identify(uid) {
         if (!uid) return;
+        var sessionData = buildSessionData();
         whenUmamiReady(function () {
-            try { window.umami.identify(uid); } catch (e) {}
+            try { window.umami.identify(uid, sessionData); } catch (e) {}
         });
     }
 
