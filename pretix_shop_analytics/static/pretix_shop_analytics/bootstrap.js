@@ -26,6 +26,8 @@
         path = path.replace(/\/order\/[^/]+\/[^/]+/g, '/order/:code/:secret');
         // /ticket/<code>/<position>/<secret>/...
         path = path.replace(/\/ticket\/[^/]+\/[^/]+\/[^/]+/g, '/ticket/:code/:position/:secret');
+        // /paypal2/...
+        path = path.replace(/(\/paypal2\/).*$/, '$1');
         return path;
     }
 
